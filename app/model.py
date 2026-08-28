@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
-from ultralytics import YOLO
+
 import torch
+from ultralytics import YOLO
 
 _orig_torch_load = torch.load
 
