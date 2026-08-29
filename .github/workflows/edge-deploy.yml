@@ -4,7 +4,6 @@ on:
     branches: [main]
 
 jobs:
-  # ── JOB 1: Testes Unitários e Lint ─────────────────────────
   test:
     name: "Lint & Tests"
     runs-on: ubuntu-latest
@@ -34,7 +33,6 @@ jobs:
       - name: Executar Pytest
         run: pytest tests/ -v
 
-  # ── JOB 2: Build da Imagem Docker (ARM64) ──────────────────
   build:
     name: "Build & Push (ARM64)"
     needs: test
@@ -68,7 +66,6 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}/yolo-api:latest
 
-  # ── JOB 3: Quality Gate do Modelo ──────────────────────────
   model-gate:
     name: "Model Quality Gate"
     needs: build
@@ -93,8 +90,7 @@ jobs:
       - name: Executar Validação (mAP@0.5 >= 0.50)
         run: python scripts/validate_model.py
 
-  # ── JOB 4: Deploy no Raspberry Pi ──────────────────────────
-deploy:
+  deploy:
     name: "Deploy → Raspberry Pi 5"
     needs: model-gate
     runs-on: ubuntu-latest
