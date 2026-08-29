@@ -94,13 +94,18 @@ jobs:
         run: python scripts/validate_model.py
 
   # ── JOB 4: Deploy no Raspberry Pi ──────────────────────────
-  deploy:
+deploy:
     name: "Deploy → Raspberry Pi 5"
     needs: model-gate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v4
+
+      - name: Conectar à rede Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
       - name: Executar Deploy via SSH
         uses: appleboy/ssh-action@v1
