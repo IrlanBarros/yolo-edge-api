@@ -8,7 +8,7 @@
 set -euo pipefail
 
 
-DEPLOY_PATH="${DEPLOY_PATH:-~home/projetos/yolo-edge-api}"
+DEPLOY_PATH="${DEPLOY_PATH:~/home/projetos/yolo-edge-api}"
 HEALTH_URL="http://localhost:8000/health"
 HEALTH_RETRIES=6
 HEALTH_WAIT=10

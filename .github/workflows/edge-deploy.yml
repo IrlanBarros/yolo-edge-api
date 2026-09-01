@@ -110,6 +110,6 @@ jobs:
           username: ${{ secrets.RPI_USER }}
           key:      ${{ secrets.RPI_SSH_KEY }}
           script: |
-            cd ~/yolo-edge-api
+            cd ~/home/projetos/yolo-edge-api
             git pull origin main
             bash scripts/deploy.sh
