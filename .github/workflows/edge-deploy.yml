@@ -109,6 +109,7 @@ jobs:
           host:     ${{ secrets.RPI_HOST }}
           username: ${{ secrets.RPI_USER }}
           key:      ${{ secrets.RPI_SSH_KEY }}
+          command_timeout: 20m
           script: |
             cd ~/home/projetos/yolo-edge-api
             git pull origin main
