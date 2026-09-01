@@ -64,7 +64,7 @@ jobs:
           file: Dockerfile.api
           platforms: linux/arm64
           push: true
-          tags: ghcr.io/${{ github.repository }}/yolo-api:latest
+          tags: ghcr.io/irlanbarros/yolo-edge-api/yolo-api:latest
 
   model-gate:
     name: "Model Quality Gate"
