@@ -35,6 +35,7 @@ docker compose pull
 
 # ── Sobe a nova versão ───────────────────────────────────────
 echo "[2/4] Iniciando nova versão..."
+docker compose down --remove-orphans
 docker compose up -d
 
 
