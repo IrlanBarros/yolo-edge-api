@@ -1,0 +1,6 @@
+outs:
+- md5: c5dc4c96694e4f05e64fe08b1be06864.dir
+  size: 17672748
+  nfiles: 1007
+  hash: md5
+  path: epi-v1
