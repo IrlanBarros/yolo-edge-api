@@ -1,9 +1,17 @@
 FROM python:3.11-slim
 
-# Instala as dependências de sistema exigidas pelo OpenCV/YOLO
-RUN apt-get update && apt-get install -y \
-    libgl1 \
-    libglib2.0-0 \
+# Chave do repositório oficial do Raspberry Pi
+COPY raspberrypi-archive-keyring.pgp /usr/share/keyrings/raspberrypi-archive-keyring.pgp
+
+# Adiciona o repositório do Raspberry Pi e instala
+# as dependências do OpenCV/YOLO e o rpicam-vid
+RUN echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.pgp] https://archive.raspberrypi.com/debian/ trixie main" \
+    > /etc/apt/sources.list.d/raspi.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+        rpicam-apps \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

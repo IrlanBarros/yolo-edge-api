@@ -1,0 +1,8 @@
+path: /home/irlanbarros/home/projetos/yolo-edge-api/dataset/exports/epi-v1-dark
+train: valid/images
+val: valid/images
+test: valid/images
+names:
+  0: Capacete
+  1: Colete
+  2: Pessoa

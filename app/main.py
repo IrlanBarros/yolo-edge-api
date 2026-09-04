@@ -1,25 +1,25 @@
 import base64
 import io
 import json
-import uuid
 import os
 import time
-from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Response
-from PIL import Image
 import numpy as np
+from fastapi import FastAPI, HTTPException
+from PIL import Image
+
+from app.model import load_model
 
 # Importações dos seus módulos locais
 from app.schemas import (
-    PredictRequest,
-    PredictResponse,
     BatchPredictRequest,
     BatchPredictResponse,
+    Detection,
     MetricsResponse,
-    Detection
+    PredictRequest,
+    PredictResponse,
 )
-from app.model import load_model
+from preprocessing.preprocessor import CONFIG_DEFAULT, Preprocessor
 
 app = FastAPI(
     title="YOLO Inference API",
@@ -33,6 +33,8 @@ _metrics = {
     "success": 0,
     "total_ms": 0.0
 }
+
+_preprocessor = Preprocessor(CONFIG_DEFAULT)
 
 def log_event(event: str, level: str = "INFO", **kwargs):
     """Emite um evento estruturado em JSON para stdout (conforme Aula 3)."""
@@ -51,7 +53,40 @@ def _decode_image(b64_str: str) -> np.ndarray:
         image = Image.open(io.BytesIO(image_data)).convert("RGB")
         return np.array(image)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Erro ao decodificar imagem base64: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Erro ao decodificar imagem base64: {e!s}")
+
+
+def _run_inference(image_rgb: np.ndarray, model_name: str, confidence: float) -> PredictResponse:
+    """Executa o mesmo pipeline explicito para requisicoes simples e em lote."""
+    model = load_model(model_name)
+    preprocessed = _preprocessor.process(image_rgb[:, :, ::-1])
+
+    t0 = time.perf_counter()
+    model_results = model(preprocessed.frame, conf=confidence, verbose=False)
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+
+    detections = []
+    for result in model_results:
+        if result.boxes is None:
+            continue
+        for box in result.boxes:
+            box_processed = box.xyxy[0].detach().cpu().numpy().reshape(1, 4)
+            box_original = _preprocessor.adjust_boxes(box_processed, preprocessed)[0]
+            class_id = int(box.cls[0].item())
+            detections.append(Detection(
+                label=model.names[class_id],
+                confidence=round(float(box.conf[0].item()), 4),
+                bbox=[round(float(coordinate), 2) for coordinate in box_original],
+            ))
+
+    height, width = image_rgb.shape[:2]
+    return PredictResponse(
+        detections=detections,
+        inference_ms=round(elapsed_ms, 2),
+        model_used=model_name,
+        image_width=width,
+        image_height=height,
+    )
 
 @app.get("/health")
 def health_check():
@@ -78,41 +113,21 @@ def predict(request: PredictRequest):
             raise HTTPException(status_code=422, detail="Forneça image_base64.")
 
         img_rgb = _decode_image(request.image_base64)
-        model = load_model(request.model_name)
-
-        t0 = time.perf_counter()
-        results = model(img_rgb, conf=request.confidence, verbose=False)
-        elapsed_ms = (time.perf_counter() - t0) * 1000
+        response = _run_inference(img_rgb, request.model_name, request.confidence)
+        elapsed_ms = response.inference_ms
 
         _metrics["success"] += 1
         _metrics["total_ms"] += elapsed_ms
-
-        # Processa as detecções para o formato do schema
-        detections = []
-        r = results[0]
-        if r.boxes is not None:
-            for box in r.boxes:
-                cls_id = int(box.cls[0])
-                label = r.names[cls_id]
-                conf = float(box.conf[0])
-                xyxy = box.xyxy[0].tolist()
-                detections.append(Detection(label=label, confidence=round(conf, 4), bbox=[round(x, 2) for x in xyxy]))
 
         img_height, img_width = img_rgb.shape[:2]
 
         log_event("predict_complete",
                   model=request.model_name,
-                  detections=len(detections),
+                  detections=len(response.detections),
                   inference_ms=round(elapsed_ms, 2),
                   image_size=f"{img_width}x{img_height}")
 
-        return PredictResponse(
-            detections=detections,
-            inference_ms=round(elapsed_ms, 2),
-            model_used=request.model_name,
-            image_width=img_width,
-            image_height=img_height
-        )
+        return response
 
     except HTTPException:
         raise
@@ -129,29 +144,7 @@ def predict_batch(request: BatchPredictRequest):
     results = []
     for img_b64 in request.images_base64:
         img = _decode_image(img_b64)
-        # Execução simplificada para batch reutilizando o fluxo padrão
-        model = load_model(request.model_name)
-        t0 = time.perf_counter()
-        res = model(img, conf=request.confidence, verbose=False)[0]
-        elapsed_ms = (time.perf_counter() - t0) * 1000
-        
-        detections = []
-        if res.boxes is not None:
-            for box in res.boxes:
-                cls_id = int(box.cls[0])
-                detections.append(Detection(
-                    label=res.names[cls_id],
-                    confidence=round(float(box.conf[0]), 4),
-                    bbox=[round(x, 2) for x in box.xyxy[0].tolist()]
-                ))
-        h, w = img.shape[:2]
-        results.append(PredictResponse(
-            detections=detections,
-            inference_ms=round(elapsed_ms, 2),
-            model_used=request.model_name,
-            image_width=w,
-            image_height=h
-        ))
+        results.append(_run_inference(img, request.model_name, request.confidence))
 
     total_ms = (time.perf_counter() - t_total) * 1000
     return BatchPredictResponse(results=results, total_inference_ms=round(total_ms, 2))

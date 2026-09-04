@@ -7,3 +7,5 @@ __pycache__/
 .venv/
 images/
 .env
+runs/
+preprocessing/outputs/

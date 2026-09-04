@@ -1,0 +1,18 @@
+path: /home/irlanbarros/home/projetos/yolo-edge-api/dataset/exports/epi-v1
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 3
+names:
+  0: Capacete
+  1: Colete
+  2: Pessoa
+
+roboflow:
+  workspace: welitonrodrigues
+  project: epi-detection-rpi5-6q1f3
+  source_version: 4
+  prepared_version: epi-v1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/irlanbarros100-gmail-com/epi-detection-rpi5-6q1f3-a3spo
